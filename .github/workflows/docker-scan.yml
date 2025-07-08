@@ -15,14 +15,21 @@ jobs:
 
       - name: Install Trivy (Official method)
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          sudo apt-get update -y
+          sudo apt-get install wget apt-transport-https gnupg lsb-release -y
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
 
       - name: Run Trivy vulnerability scan on Dockerfile
         run: |
-          ./trivy config --exit-code 1 --severity HIGH,CRITICAL .
+          trivy config --exit-code 1 --severity HIGH,CRITICAL .
 
       - name: Run fix.sh if scan failed
         if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           chmod +x fix.sh
           ./fix.sh
