@@ -1,7 +1,11 @@
-# ❌ Vulnerable base image (EOL & vulnerable packages)
-FROM python:3.6-slim
+# Start from a minimal base image
+FROM alpine:3.12
 
-# ❌ This version of Flask has vulnerabilities
-RUN pip install flask==1.0.2
+# Install a sample package (for demo purposes)
+RUN apk add --no-cache curl
 
-CMD ["python3"]
+# Security best practice: switch to non-root user
+USER nobody
+
+# Run a sample command (replace as needed)
+CMD ["curl", "--help"]
