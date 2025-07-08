@@ -1,0 +1,30 @@
+name: Dockerfile Scan and Auto-Fix
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Trivy scanner
+        run: |
+          sudo apt-get update
+          sudo apt-get install wget -y
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.51.1_Linux-64bit.deb
+          sudo dpkg -i trivy_0.51.1_Linux-64bit.deb
+
+      - name: Run Trivy vulnerability scan on Dockerfile
+        run: |
+          trivy config --exit-code 1 --severity HIGH,CRITICAL .
+
+      - name: Run fix.sh if scan failed
+        if: failure()
+        run: |
+          chmod +x fix.sh
+          ./fix.sh
