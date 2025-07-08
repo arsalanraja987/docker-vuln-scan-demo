@@ -1,8 +1,9 @@
-name: Dockerfile Scan and Auto-Fix
+name: Docker Vulnerability Scan and Auto-Fix
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,32 +11,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Trivy
+      - name: 🔍 Install Trivy
         run: |
           sudo apt-get update
-          sudo apt-get install wget -y
-          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.49.1_Linux-64bit.tar.gz
-          tar zxvf trivy_0.49.1_Linux-64bit.tar.gz
-          sudo mv trivy /usr/local/bin/
+          sudo apt-get install wget apt-transport-https gnupg lsb-release -y
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
 
-      - name: Run Trivy vulnerability scan on Dockerfile
-        run: |
-          trivy config --exit-code 1 --severity HIGH,CRITICAL .
+      - name: 🛡️ Scan Dockerfile
+        run: trivy config --exit-code 1 --severity HIGH,CRITICAL .
 
-      - name: Run fix.sh if scan failed
-        if: failure()
+      - name: 🛠️ Run Auto-Fix Script
         run: |
           chmod +x fix.sh
           ./fix.sh
 
-      - name: Push fixed Dockerfile to GitHub
-        if: failure()
+      - name: 🔧 Push fixed Dockerfile to GitHub
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add Dockerfile fix.sh
-          git commit -m "fix: update base image to reduce vulnerabilities" || echo "Nothing to commit"
-          git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git HEAD:main
+          git add Dockerfile
+          git commit -m "fix: update base image to reduce vulnerabilities" || echo "⚠️ No changes to commit"
+          git push https://x-access-token:${GH_PAT}@github.com/${{ github.repository }} HEAD:main
